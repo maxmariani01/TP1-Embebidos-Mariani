@@ -1,0 +1,5 @@
+
+bin/blink_minimal.elf:     file format elf32-littlearm
+
+Contents of section .data:
+ 20000004 03000000                             ....            

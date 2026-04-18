@@ -1,0 +1,19 @@
+# Archivos generados por el toolchain
+proyecto/obj/
+proyecto/bin/
+*.elf
+*.bin
+*.o
+*.d
+
+# Backups
+*.sano
+*.bak
+*~
+
+# Configuración local
+.vscode/
+
+# Archivos de sistema
+.DS_Store
+Thumbs.db

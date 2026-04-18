@@ -1,0 +1,67 @@
+FALLA C — OBSERVACIONES EN PLACA
+
+Comportamiento por reset:
+Reset 1: LED queda encendido fijo apenas se suelta el boton de reset.
+Reset 2: LED queda encendido fijo. Mismo comportamiento que Reset 1.
+Reset 3: LED queda encendido fijo. Identico.
+Reset 4: LED queda encendido fijo. Identico.
+Reset 5-10: Se probaron multiples reseteos adicionales; el LED quedo
+encendido fijo en todos los casos, sin variabilidad observable.
+
+El LED no llega a parpadear en ningun momento. No hay patron de blink,
+ni pausas, ni variabilidad entre resets.
+
+Interpretacion del sintoma:
+
+El comportamiento observado corresponde al "Escenario A" anticipado en
+la prediccion: el prologo de main() realiza PUSH de registros,
+decrementando el SP desde su valor inicial de 0x20000010 hacia
+direcciones mas bajas. Las direcciones 0x20000000 (g_zero_marker,
+.bss) y 0x20000004 (g_blink_count, .data) quedan sobreescritas por
+esos pushes con valores arbitrarios provenientes de los registros
+guardados. Tras retornar del prologo, main() lee g_zero_marker y
+obtiene un valor distinto de cero; la condicion if (g_zero_marker == 0)
+evalua falso y el codigo entra en la rama else, que fija PC13 en bajo
+(LED encendido, dado que el LED de la Blue Pill tiene logica invertida).
+
+Por que el sintoma resulto determinista en lugar de erratico:
+
+La prediccion anticipaba la posibilidad de comportamiento erratico
+entre resets. En la practica, el programa presentado es tan simple que
+no contiene fuentes de no-determinismo:
+- No hay interrupciones asincronas habilitadas.
+- No hay entradas externas que modifiquen el flujo.
+- La RAM se limpia deterministicamente en cada arranque (.bss a cero,
+  .data desde Flash).
+- El compilador genera siempre el mismo prologo de main(), con los
+  mismos pushes en el mismo orden.
+
+Como resultado, las direcciones corrompidas y los valores escritos son
+identicos en cada reset. La falla C mantiene su naturaleza de "mayor
+potencial erratico" a nivel conceptual, pero el determinismo solo
+emerge cuando el programa contiene variables de estado, interrupciones
+o entradas externas. Esta observacion refuerza el caracter distintivo
+de esta categoria de fallas: no son siempre erraticas en la practica,
+pero su comportamiento depende de la dinamica de ejecucion en lugar de
+una causa raiz puntual (como la falla B, donde la copia defectuosa
+ocurre una vez y el valor resultante queda fijo en RAM hasta que otra
+escritura lo cambie).
+
+Evidencia complementaria capturada en 14_flash_recuperado.txt:
+
+Al flashear la version recuperada, OpenOCD capturo el estado del CPU
+antes de reprogramar. Ese estado corresponde al CPU que venia
+ejecutando la falla C:
+
+    xPSR: 0x01000000   pc: 0x080001a4   msp: 0x20000010
+
+A diferencia de la falla A (donde xPSR=0x00000000, pc y msp con basura
+confirmaban HardFault temprano), aqui el xPSR y el PC son los esperados
+de un arranque normal: el CPU esta en modo Thumb valido y acaba de
+saltar al Reset_Handler. El unico valor anomalo es el msp = 0x20000010,
+que coincide exactamente con el __reset_stack_pointer defectuoso y con
+los primeros 4 bytes de .vectors (07_vector_table_defectuosa.txt).
+
+Esta evidencia demuestra que la falla no esta en la vector table ni en
+el codigo, sino en el contrato de memoria: el CPU arranco correctamente,
+pero con un stack pointer que invade la region de variables globales.

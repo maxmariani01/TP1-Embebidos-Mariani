@@ -1,0 +1,4 @@
+arm-none-eabi-gcc -Wall -Wextra -mcpu=cortex-m3 -g -c -o obj/main.o src/main.c
+arm-none-eabi-gcc -Wall -Wextra -mcpu=cortex-m3 -g -c -o obj/startup.o src/startup.c
+arm-none-eabi-gcc -T linker.ld -nostartfiles -mcpu=cortex-m3 -Wl,-Map=bin/blink_minimal.elf.map -o bin/blink_minimal.elf obj/main.o obj/startup.o
+arm-none-eabi-objcopy -O binary bin/blink_minimal.elf bin/blink_minimal.elf.bin

@@ -1,0 +1,62 @@
+FALLA B — PREDICCION (escrita antes de flashear el firmware defectuoso)
+
+Cambio a introducir:
+En linker.ld, reemplazar la linea
+    _load_address = LOADADDR(.data);
+por
+    _load_address = 0x08000000;
+De esta forma, el simbolo _load_address ya no apunta a la direccion
+correcta donde el linker coloco los valores iniciales de .data
+(actualmente 0x08000200), sino al inicio mismo de la Flash, donde vive
+el primer word de la vector table (__reset_stack_pointer = 0x20005000).
+
+Que hace startup.c con este simbolo:
+El Reset_Handler lo usa como origen del bucle de copia de .data:
+    uint32_t *src = &_load_address;
+    for (uint32_t *dest = &_sdata; dest < &_edata;) {
+        *dest++ = *src++;
+    }
+Este bucle lee 4 bytes (uint32_t) desde la direccion _load_address
+y los copia a RAM en la direccion _sdata (donde vive g_blink_count).
+Como _sdata..._edata abarca un solo uint32_t, el bucle ejecuta una
+sola iteracion.
+
+Valor esperado de la variable tras la copia defectuosa:
+La copia leera desde 0x08000000 el valor de __reset_stack_pointer,
+que es 0x20005000. Por lo tanto, g_blink_count ya no valdra 3 sino
+0x20005000 en decimal: 536.891.392.
+
+Sintoma esperado:
+El codigo del blink ejecuta un for de k=0 hasta k < g_blink_count.
+Con g_blink_count = 536.891.392, el bucle ejecuta ese numero enorme
+de iteraciones antes de salir y tomar la pausa larga. Cada iteracion
+dura unos milisegundos (por el delay interno de 200.000 ciclos).
+En la practica, el LED parpadeara a ritmo constante sin hacer la
+pausa larga caracteristica del blink sano — o la pausa entre
+series tardara mucho tiempo en aparecer (varios minutos u horas).
+
+El codigo NO entra en HardFault, no se cuelga y main() corre:
+el bug es puramente de datos, no de control de flujo.
+g_zero_marker (que vive en .bss) sigue valiendo 0 porque el loop
+que limpia .bss no fue alterado; por lo tanto el if (g_zero_marker == 0)
+sigue siendo verdadero y se ejecuta el blink. Pero la cantidad de
+parpadeos por serie es incorrecta.
+
+Por que este sintoma y no otro:
+Porque el problema no esta en la vector table, ni en el bucle de
+copia, ni en la limpieza de .bss, ni en main(). El problema es que
+la fuente de la copia es incorrecta: el startup ejecuta correctamente
+su trabajo (copia 4 bytes de la posicion que le indicaron), pero los
+bytes que copia no son los valores iniciales reales de .data, son
+otros bytes del binario que el linker puso por otras razones.
+
+Evidencia a recolectar para confirmar la hipotesis:
+1. diff de linker.ld mostrando el cambio exacto.
+2. nm para ver que _load_address ahora vale 0x08000000 en vez de 0x08000200.
+3. objdump -s -j .data para ver que en la LMA "oficial" (0x08000200)
+   sigue existiendo el valor inicial correcto (0x00000003), pero el
+   startup ya no lo va a leer de ahi.
+4. objdump -s de los primeros bytes de Flash para mostrar el valor
+   que el startup va a leer por error (0x20005000).
+5. Comportamiento observado en placa: blink sin pausa larga o con
+   muchisimos pulsos antes de la pausa.

@@ -1,0 +1,9 @@
+76,77c76,80
+< /* Dirección inicial de la pila: al final de la RAM */
+< __reset_stack_pointer = ORIGIN(RAM) + LENGTH(RAM);
+---
+> /* FALLA C: Stack con margen insuficiente (16 bytes antes de .bss). */
+> /* Deberia ser ORIGIN(RAM) + LENGTH(RAM) = 0x20005000. */
+> /* Esta alterado a ORIGIN(RAM) + 16 = 0x20000010, que cae DENTRO del */
+> /* rango de .bss y .data. El stack colisiona con variables globales. */
+> __reset_stack_pointer = ORIGIN(RAM) + 16;

@@ -1,0 +1,41 @@
+arm-none-eabi-objdump -d bin/blink_minimal.elf | head -40
+
+bin/blink_minimal.elf:     file format elf32-littlearm
+
+
+Disassembly of section .text:
+
+080000d4 <main>:
+ 80000d4:	b480      	push	{r7}
+ 80000d6:	b085      	sub	sp, #20
+ 80000d8:	af00      	add	r7, sp, #0
+ 80000da:	4b29      	ldr	r3, [pc, #164]	@ (8000180 <main+0xac>)
+ 80000dc:	681b      	ldr	r3, [r3, #0]
+ 80000de:	4a28      	ldr	r2, [pc, #160]	@ (8000180 <main+0xac>)
+ 80000e0:	f043 0310 	orr.w	r3, r3, #16
+ 80000e4:	6013      	str	r3, [r2, #0]
+ 80000e6:	4b27      	ldr	r3, [pc, #156]	@ (8000184 <main+0xb0>)
+ 80000e8:	681b      	ldr	r3, [r3, #0]
+ 80000ea:	4a26      	ldr	r2, [pc, #152]	@ (8000184 <main+0xb0>)
+ 80000ec:	f423 0370 	bic.w	r3, r3, #15728640	@ 0xf00000
+ 80000f0:	6013      	str	r3, [r2, #0]
+ 80000f2:	4b24      	ldr	r3, [pc, #144]	@ (8000184 <main+0xb0>)
+ 80000f4:	681b      	ldr	r3, [r3, #0]
+ 80000f6:	4a23      	ldr	r2, [pc, #140]	@ (8000184 <main+0xb0>)
+ 80000f8:	f443 1300 	orr.w	r3, r3, #2097152	@ 0x200000
+ 80000fc:	6013      	str	r3, [r2, #0]
+ 80000fe:	4b22      	ldr	r3, [pc, #136]	@ (8000188 <main+0xb4>)
+ 8000100:	681b      	ldr	r3, [r3, #0]
+ 8000102:	2b00      	cmp	r3, #0
+ 8000104:	d135      	bne.n	8000172 <main+0x9e>
+ 8000106:	2300      	movs	r3, #0
+ 8000108:	60fb      	str	r3, [r7, #12]
+ 800010a:	e022      	b.n	8000152 <main+0x7e>
+ 800010c:	4b1f      	ldr	r3, [pc, #124]	@ (800018c <main+0xb8>)
+ 800010e:	681b      	ldr	r3, [r3, #0]
+ 8000110:	4a1e      	ldr	r2, [pc, #120]	@ (800018c <main+0xb8>)
+ 8000112:	f423 5300 	bic.w	r3, r3, #8192	@ 0x2000
+ 8000116:	6013      	str	r3, [r2, #0]
+ 8000118:	2300      	movs	r3, #0
+ 800011a:	60bb      	str	r3, [r7, #8]
+ 800011c:	e002      	b.n	8000124 <main+0x50>

@@ -1,0 +1,27 @@
+openocd -f interface/stlink.cfg -c "set CPUTAPID 0" -f target/stm32f1x.cfg -c "program bin/blink_minimal.elf verify reset exit"
+Open On-Chip Debugger v0.12.0-esp32-20240318 (2024-03-18-18:25)
+Licensed under GNU GPL v2
+For bug reports, read
+	http://openocd.org/doc/doxygen/bugs.html
+0
+Info : auto-selecting first available session transport "hla_swd". To override use 'transport select <transport>'.
+Info : The selected transport took over low-level target control. The results might differ compared to plain JTAG/SWD
+Info : clock speed 1000 kHz
+Info : STLINK V2J37S7 (API v2) VID:PID 0483:3748
+Info : Target voltage: 3.197885
+Info : [stm32f1x.cpu] Cortex-M3 r2p1 processor detected
+Info : [stm32f1x.cpu] target has 6 breakpoints, 4 watchpoints
+Info : [stm32f1x.cpu] Examination succeed
+Info : starting gdb server for stm32f1x.cpu on 3333
+Info : Listening on port 3333 for gdb connections
+[stm32f1x.cpu] halted due to debug-request, current mode: Thread 
+xPSR: 00000000 pc: 0x4b29af00 msp: 0xb085b480
+** Programming Started **
+Info : device id = 0x13030410
+Info : flash size = 64 KiB
+Warn : Adding extra erase range, 0x08000204 .. 0x080003ff
+** Programming Finished **
+** Verify Started **
+** Verified OK **
+** Resetting Target **
+shutdown command invoked

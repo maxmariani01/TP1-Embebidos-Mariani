@@ -1,0 +1,19 @@
+arm-none-eabi-nm bin/blink_minimal.elf | grep -E "Reset_Handler|main|vector_table|_sdata|_edata|_sbss|_ebss|_load_address|__reset_stack_pointer|g_blink_count|g_zero_marker"
+
+08000000 R vector_table
+080000d4 T main
+080001a4 T Reset_Handler
+08000200 A _load_address
+20000000 B _sbss
+20000000 B g_zero_marker
+20000004 B _ebss
+20000004 D _sdata
+20000004 D g_blink_count
+20000008 D _edata
+20005000 R __reset_stack_pointer
+
+T (text) → en Flash, código ejecutable.
+R (read-only data) → en Flash, datos constantes. vector_table (por ser const) debería estar acá.
+D (data) → en RAM sección .data.
+B (bss) → en RAM sección .bss.
+A (absolute) → símbolo con dirección fija no asociada a sección.

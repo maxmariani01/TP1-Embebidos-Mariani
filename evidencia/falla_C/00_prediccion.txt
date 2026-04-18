@@ -1,0 +1,76 @@
+FALLA C — PREDICCION (escrita antes de flashear el firmware defectuoso)
+
+Cambio a introducir:
+En linker.ld, reemplazar la linea
+    __reset_stack_pointer = ORIGIN(RAM) + LENGTH(RAM);
+por
+    __reset_stack_pointer = ORIGIN(RAM) + 16;
+Esto deja al stack con solo 16 bytes de espacio antes del inicio de
+.bss (en 0x20000000). Las primeras variables (.bss y .data) quedan
+DENTRO del rango que el stack va a usar: stack crece hacia abajo
+desde 0x20000010 y al primer push ya colisiona con g_zero_marker
+(en 0x20000000).
+
+Nota importante: el stack de Cortex-M3 crece hacia abajo en
+palabras (decrementa SP, luego escribe). Un PUSH {r7} en el prologo
+de main() hara SP = SP - 4, luego escribe en esa direccion.
+Partiendo de SP = 0x20000010, el primer push lo lleva a 0x2000000C,
+el segundo a 0x20000008... y en pocas operaciones el stack escribe
+sobre las direcciones donde viven g_zero_marker (0x20000000) y
+g_blink_count (0x20000004).
+
+Sintomas esperados (multiples posibles):
+
+Escenario A (mas probable):
+Al ejecutar el prologo de main(), el stack sobreescribe
+g_zero_marker y/o g_blink_count con valores que son registros
+apilados (r7, etc.). g_zero_marker puede quedar con un valor
+!= 0, haciendo que el if (g_zero_marker == 0) de main() evalue
+falso y el codigo caiga en el else, dejando el LED fijo.
+
+Escenario B:
+g_blink_count queda con un valor basura (puede ser muy chico,
+muy grande, o incluso 0). El blink ejecuta un numero impredecible
+de pulsos por serie, distinto a 3.
+
+Escenario C:
+Si los pushes iniciales no sobreescriben .bss/.data de forma
+fatal inmediatamente, el programa arranca y el stack sigue siendo
+reutilizado constantemente por llamadas a funciones y variables
+locales. Esto genera corrupcion progresiva: el blink funciona
+durante un tiempo pero eventualmente se rompe o resetea solo.
+
+Escenario D (menos probable pero posible):
+Algun push escribe a una direccion que no esta mapeada o activa
+un fault. Se produce HardFault.
+
+Por que esta falla es mas erratica que la falla B:
+
+En la falla B, la causa raiz es una COPIA UNICA realizada por el
+Reset_Handler en un momento fijo (al arranque). El efecto es
+completamente determinista: g_blink_count siempre queda con el
+mismo valor basura, siempre produce el mismo sintoma.
+
+En la falla C, en cambio, el daño no ocurre en un momento unico
+sino CONTINUAMENTE durante la ejecucion. Cada llamada a funcion,
+cada variable local, cada interrupcion puede mover el SP y
+sobreescribir distintas zonas. El comportamiento depende de:
+- cuantos niveles de funcion esten anidados,
+- si se uso volatile (que evita optimizaciones) o no,
+- el estado inicial de los registros al momento del push,
+- la cantidad exacta de bytes que cada push consuma.
+
+Dos flasheos identicos pueden dar comportamientos visualmente
+distintos. Esta no-determinismo es la firma caracteristica de los
+bugs de stack/region RAM y es por lo que el TP los distingue como
+categoria aparte.
+
+Evidencia a recolectar para confirmar la hipotesis:
+1. diff de linker.ld mostrando el cambio.
+2. nm para ver que __reset_stack_pointer ahora vale 0x20000010.
+3. objdump -h para mostrar que .bss (0x20000000) y .data
+   (0x20000004) estan DENTRO del rango que el stack va a invadir.
+4. Hexdump de los primeros 4 bytes del .bin para verificar que
+   el nuevo SP inicial quedo grabado en la vector table.
+5. Comportamiento observado en placa (descripcion cualitativa,
+   dado el caracter erratico).

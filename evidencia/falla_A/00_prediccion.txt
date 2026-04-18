@@ -1,0 +1,39 @@
+FALLA A — PREDICCION (escrita antes de flashear el firmware defectuoso)
+
+Cambio a introducir:
+En linker.ld, invertir el orden de las secciones dentro de SECTIONS,
+declarando .text ANTES que .vectors. De este modo, la seccion .vectors
+ya no quedara alineada con ORIGIN(FLASH) = 0x08000000, sino que quedara
+ubicada despues de .text, dentro de Flash pero en una direccion arbitraria.
+
+Sintoma esperado:
+Al reset, el Cortex-M3 leera automaticamente el primer word de Flash
+(direccion 0x08000000) y lo cargara en el MSP. Con esta falla, ese primer
+word ya no sera __reset_stack_pointer (0x20005000) sino la primera
+instruccion de .text (el prologo de alguna funcion). Esto significa que
+el SP se cargara con un valor que NO es una direccion valida de RAM.
+
+Del mismo modo, el segundo word (direccion 0x08000004) ya no sera la
+direccion de Reset_Handler, sino la segunda instruccion de .text. El
+micro saltara a una direccion que probablemente no sea un handler valido
+ni una instruccion Thumb bien formada.
+
+Consecuencia esperada: el micro entra en HardFault inmediatamente o se
+comporta de manera impredecible. No llega a Reset_Handler y, por lo
+tanto, no ejecuta el blink. El LED queda apagado (o fijo en su estado
+de reset, PC13 flotante alto).
+
+Por que este sintoma y no otro:
+Porque el error ocurre *antes* de cualquier codigo nuestro. No es un
+problema de main(), no es un problema de .data ni .bss, no es un bug
+logico: el hardware arranca leyendo la direccion 0x08000000 en forma
+incondicional, y si el contenido de esa direccion no respeta el
+contrato de vector table Cortex-M3, el arranque falla al instante.
+
+Evidencia a recolectar para confirmar la hipotesis:
+1. arm-none-eabi-objdump -h para mostrar que .vectors ya NO esta en
+   0x08000000.
+2. nm para ver la direccion nueva de vector_table.
+3. Lectura de los primeros bytes del .bin (no coinciden con
+   __reset_stack_pointer).
+4. Comportamiento observado en placa: LED apagado fijo (no parpadea).

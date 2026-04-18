@@ -1,0 +1,16 @@
+81,83c81,84
+<     /* Sección de vectores de interrupciones (va en FLASH al principio) */
+<     .vectors : {
+<         KEEP(*(.isr_vector));  /* Contiene el puntero de pila inicial y el Reset_Handler */
+---
+>     /* FALLA A: .text declarada ANTES que .vectors. */
+>     /* Consecuencia: .vectors ya no queda en 0x08000000. */
+>     .text : {
+>         *(.text*)
+86,88c87,88
+<     /* Sección de código: todas las funciones y código ejecutable */
+<     .text : {
+<         *(.text*)         /* Captura todas las subsecciones que empiecen con .text */
+---
+>     .vectors : {
+>         KEEP(*(.isr_vector));
